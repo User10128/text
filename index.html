@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text</title>
+  <link rel="icon" type="image/png" href="/favicon.png?v=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
+    <style>
+        :root {
+            /* Light Theme Variables */
+            --bg-main: #ffffff;
+            --bg-sidebar: #f1f3f4;
+            --text-main: #202124;
+            --text-muted: #5f6368;
+            --border-color: #dadce0;
+            --accent: #1a73e8;
+            --hover-bg: #e8eaed;
+            --active-bg: #e8eaed;
+            --active-text: #202124;
+            --selection-bg: #c6dafc;
+            --scrollbar-bg: #f1f3f4;
+            --scrollbar-thumb: #dadce0;
+            --scrollbar-thumb-hover: #bdc1c6;
+            --toggle-bg: #80868b;
+            --toggle-knob: #ffffff;
+            --modal-bg: #ffffff;
+            --modal-text: #202124;
+            --modal-overlay: rgba(0,0,0,0.5);
+            --input-bg: #ffffff;
+        }
+
+        .dark {
+            /* Dark Theme Variables */
+            --bg-main: #202124;
+            --bg-sidebar: #202124;
+            --text-main: #e8eaed;
+            --text-muted: #9aa0a6;
+            --border-color: #3c4043;
+            --accent: #8ab4f8;
+            --hover-bg: rgba(255, 255, 255, 0.04);
+            --active-bg: #3c4043;
+            --active-text: #e8eaed;
+            --selection-bg: rgba(138, 180, 248, 0.3);
+            --scrollbar-bg: #202124;
+            --scrollbar-thumb: #5f6368;
+            --scrollbar-thumb-hover: #80868b;
+            --toggle-bg: #5f6368;
+            --toggle-knob: #e8eaed;
+            --modal-bg: #ffffff;
+            --modal-text: #202124;
+            --modal-overlay: rgba(0,0,0,0.6);
+            --input-bg: rgba(0,0,0,0.1);
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Noto Sans', Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        ::selection {
+            background-color: var(--selection-bg);
+            color: inherit;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+            background-color: var(--scrollbar-bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar-thumb);
+            border-radius: 5px;
+            border: 2px solid var(--scrollbar-bg);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: var(--scrollbar-thumb-hover);
+        }
+
+        .CodeMirror {
+            height: 100%;
+            width: 100%;
+            font-family: 'Roboto Mono', 'Consolas', monospace;
+            background: transparent !important;
+            color: var(--text-main) !important;
+            font-size: var(--editor-font-size, 15px);
+        }
+        .CodeMirror-gutters {
+            background: var(--bg-main) !important;
+            border-right: none !important;
+        }
+        .CodeMirror-linenumber {
+            color: var(--text-muted) !important;
+            padding-right: 12px !important;
+            min-width: 32px !important;
+            text-align: right !important;
+        }
+        .CodeMirror-cursor {
+            border-left: 2px solid var(--accent) !important;
+        }
+        .CodeMirror-selected {
+            background: var(--selection-bg) !important;
+        }
+        
+        /* Syntax highlighting colors */
+        .cm-s-chrome-text span.cm-tag { color: #8ab4f8; }
+        .cm-s-chrome-text span.cm-attribute { color: #f28b82; }
+        .cm-s-chrome-text span.cm-string { color: #81c995; }
+        .cm-s-chrome-text span.cm-comment { color: #9aa0a6; }
+        .cm-s-chrome-text span.cm-keyword { color: #c58af9; }
+        
+        body.light .cm-s-chrome-text span.cm-tag { color: #1a73e8; }
+        body.light .cm-s-chrome-text span.cm-attribute { color: #d93025; }
+        body.light .cm-s-chrome-text span.cm-string { color: #1e8e3e; }
+        body.light .cm-s-chrome-text span.cm-comment { color: #5f6368; }
+        body.light .cm-s-chrome-text span.cm-keyword { color: #9334e6; }
+
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: var(--accent);
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: rgba(138, 180, 248, 0.3);
+        }
+        .toggle-checkbox:checked + .toggle-label:after {
+            transform: translateX(100%);
+            background-color: var(--accent);
+        }
+        
+        input:focus-visible, button:focus-visible, textarea:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: -1px;
+        }
+
+        .file-item.active {
+            background-color: var(--active-bg);
+            color: var(--active-text);
+            border-radius: 9999px;
+        }
+
+        input[type="radio"] {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-muted);
+            border-radius: 50%;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+        }
+        input[type="radio"]:checked {
+            border-color: var(--accent);
+        }
+        input[type="radio"]:checked::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent);
+        }
+
+        .settings-item.active-focus {
+            border: 1px solid var(--accent);
+            border-radius: 9999px;
+            padding: 3px 15px;
+            margin: -4px -16px;
+        }
+
+        /* Sidebar sliding transition */
+        #sidebar-container {
+            margin-left: 0;
+            transition: margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #sidebar-container.collapsed {
+            margin-left: -260px;
+        }
+    </style>
+</head>
+<body class="flex h-screen w-screen dark text-[15px]">
+
+    <!-- Sidebar Area -->
+    <div id="sidebar-container" class="w-[260px] flex-shrink-0 bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] flex flex-col h-full z-10 shadow-[1px_0_4px_rgba(0,0,0,0.1)] relative">
+        
+        <!-- MAIN SIDEBAR VIEW -->
+        <div id="main-sidebar" class="flex flex-col h-full absolute inset-0 bg-[var(--bg-sidebar)] transition-opacity duration-200">
+            <div class="h-12 flex items-center px-6 text-[16px] font-medium tracking-wide border-b border-[var(--border-color)]">
+                Text
+            </div>
+            
+            <div class="py-3 flex flex-col gap-1">
+                <div class="px-6 py-[6px] hover:bg-[var(--hover-bg)] cursor-pointer text-[var(--text-main)]" onclick="app.newFile()">New</div>
+                <div class="px-6 py-[6px] hover:bg-[var(--hover-bg)] cursor-pointer text-[var(--text-main)]" onclick="app.openFile()">Open</div>
+                <div class="px-6 py-[6px] hover:bg-[var(--hover-bg)] cursor-pointer text-[var(--text-main)]" onclick="app.saveFile()">Save</div>
+                <div class="px-6 py-[6px] hover:bg-[var(--hover-bg)] cursor-pointer text-[var(--text-main)]" onclick="app.saveFileAs()">Save as</div>
+            </div>
+
+            <div class="h-[1px] bg-[var(--border-color)] mx-4 my-1"></div>
+
+            <div id="file-list" class="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-1">
+                <!-- File items dynamically inserted here -->
+            </div>
+
+            <div class="h-[1px] bg-[var(--border-color)] mx-4 mb-2 mt-auto"></div>
+
+            <div class="px-6 py-3 mb-2 hover:bg-[var(--hover-bg)] cursor-pointer text-[var(--text-main)] flex items-center" onclick="app.toggleSettingsView(true)">
+                Settings
+            </div>
+        </div>
+
+        <!-- SETTINGS SIDEBAR VIEW -->
+        <div id="settings-sidebar" class="flex flex-col h-full absolute inset-0 bg-[var(--bg-sidebar)] opacity-0 pointer-events-none transition-opacity duration-200">
+            <div class="h-12 flex items-center px-6 text-[16px] font-medium tracking-wide border-b border-[var(--border-color)] text-[var(--text-main)]">
+                Settings
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5 text-[15px] text-[var(--text-main)]">
+                
+                <div class="flex justify-between items-center group settings-item focus-within:active-focus">
+                    <span>Font size</span>
+                    <input type="number" id="setting-fontsize" class="bg-transparent border-none text-right text-[var(--accent)] w-12 outline-none font-medium" value="15" min="8" max="72" onchange="app.updateSettings('fontSize', this.value)">
+                </div>
+
+                <div class="flex flex-col gap-4">
+                    <label class="flex justify-between items-center cursor-pointer">
+                        <span>Tabs to spaces</span>
+                        <div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" id="setting-tabs" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-[var(--toggle-knob)] border-2 border-[var(--toggle-bg)] appearance-none cursor-pointer z-10" onchange="app.updateSettings('tabsToSpaces', this.checked)"/>
+                            <label for="setting-tabs" class="toggle-label block overflow-hidden h-4 rounded-full bg-[var(--toggle-bg)] cursor-pointer"></label>
+                        </div>
+                    </label>
+
+                    <div class="flex justify-between items-center">
+                        <span>Tab size</span>
+                        <input type="number" id="setting-tabsize" class="bg-[var(--active-bg)] text-[var(--text-main)] rounded px-2 py-1 w-12 text-center outline-none border border-transparent focus:border-[var(--accent)] font-medium" value="4" min="1" max="8" onchange="app.updateSettings('tabSize', this.value)">
+                    </div>
+
+                    <label class="flex justify-between items-center cursor-pointer">
+                        <span>Wrap lines</span>
+                        <div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" id="setting-wrap" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-[var(--toggle-knob)] border-2 border-[var(--toggle-bg)] appearance-none cursor-pointer z-10" onchange="app.updateSettings('wrapLines', this.checked)"/>
+                            <label for="setting-wrap" class="toggle-label block overflow-hidden h-4 rounded-full bg-[var(--toggle-bg)] cursor-pointer"></label>
+                        </div>
+                    </label>
+
+                    <label class="flex justify-between items-center cursor-pointer">
+                        <span>Show line numbers</span>
+                        <div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" id="setting-linenumbers" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-[var(--toggle-knob)] border-2 border-[var(--toggle-bg)] appearance-none cursor-pointer z-10" onchange="app.updateSettings('showLineNumbers', this.checked)"/>
+                            <label for="setting-linenumbers" class="toggle-label block overflow-hidden h-4 rounded-full bg-[var(--toggle-bg)] cursor-pointer"></label>
+                        </div>
+                    </label>
+
+                    <label class="flex justify-between items-center cursor-pointer">
+                        <span>Smart indent</span>
+                        <div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" id="setting-smartindent" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-[var(--toggle-knob)] border-2 border-[var(--toggle-bg)] appearance-none cursor-pointer z-10" onchange="app.updateSettings('smartIndent', this.checked)"/>
+                            <label for="setting-smartindent" class="toggle-label block overflow-hidden h-4 rounded-full bg-[var(--toggle-bg)] cursor-pointer"></label>
+                        </div>
+                    </label>
+
+                    <label class="flex justify-between items-center cursor-pointer opacity-50">
+                        <span>Always on top</span>
+                        <div class="relative inline-block w-8 mr-2 align-middle select-none transition duration-200 ease-in pointer-events-none">
+                            <input type="checkbox" disabled class="absolute block w-4 h-4 rounded-full bg-[#bdc1c6] border-2 border-[#80868b] appearance-none z-10"/>
+                            <label class="block overflow-hidden h-4 rounded-full bg-[#80868b]"></label>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="mt-4">
+                    <div class="text-[12px] font-semibold tracking-wider text-[var(--text-muted)] mb-3">THEMES</div>
+                    <div class="flex flex-col gap-3">
+                        <label class="flex justify-between items-center cursor-pointer">
+                            <span>Use device theme</span>
+                            <input type="radio" name="theme" value="system" onchange="app.setTheme('system')">
+                        </label>
+                        <label class="flex justify-between items-center cursor-pointer">
+                            <span>Light</span>
+                            <input type="radio" name="theme" value="light" onchange="app.setTheme('light')">
+                        </label>
+                        <label class="flex justify-between items-center cursor-pointer">
+                            <span>Dark</span>
+                            <input type="radio" name="theme" value="dark" onchange="app.setTheme('dark')">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-4 mb-4">
+                    <div class="text-[12px] font-semibold tracking-wider text-[var(--text-muted)] mb-3">HELP</div>
+                    <a href="https://support.google.com/chromebook/answer/183101#textapp" target="_blank" class="flex justify-between items-center cursor-pointer hover:text-[var(--text-main)] text-[var(--text-main)] no-underline">
+                        <span>Keyboard shortcuts</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-70"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </a>
+                </div>
+            </div>
+
+            <div class="h-[1px] bg-[var(--border-color)] mx-4 mt-auto"></div>
+
+            <div class="px-6 py-3 mb-2 hover:bg-[var(--hover-bg)] cursor-pointer text-[var(--text-main)]" onclick="app.toggleSettingsView(false)">
+                Back
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0 bg-[var(--bg-main)] relative z-0">
+        
+        <div class="h-12 border-b border-[var(--border-color)] bg-[var(--bg-main)] flex items-center justify-between px-3 flex-shrink-0">
+            <!-- Left: Menu & Search -->
+            <div class="flex items-center gap-2">
+                <button class="p-2 rounded-full hover:bg-[var(--hover-bg)] text-[var(--text-muted)] focus:outline-none" onclick="app.toggleSidebar()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <div class="relative flex items-center">
+                    <input type="text" id="find-input" placeholder="Find..." class="bg-[var(--input-bg)] border border-[var(--border-color)] rounded-full pl-3 pr-8 py-[4px] text-[15px] text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] w-48 transition-colors bg-transparent">
+                </div>
+            </div>
+
+            <!-- Center: Title -->
+            <div id="topbar-title" class="text-[15px] text-[var(--text-main)] truncate max-w-[40%] text-center">
+                Untitled 1
+            </div>
+
+            <!-- Right: Window Controls -->
+            <div class="flex items-center text-[var(--text-muted)] mr-1">
+                <button class="p-2 hover:bg-[var(--hover-bg)] w-10 h-10 flex justify-center items-center rounded-sm transition-colors focus:outline-none" onclick="app.toggleFullScreen()" title="Full screen">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Editor Container -->
+        <div class="flex-1 flex overflow-hidden relative bg-[var(--bg-main)]" id="editor-container"></div>
+    </div>
+
+    <!-- Unsaved Changes Modal -->
+    <div id="unsaved-modal" class="fixed inset-0 bg-[var(--modal-overlay)] hidden items-center justify-center z-50 opacity-0 transition-opacity duration-200">
+        <div class="bg-[var(--modal-bg)] rounded-lg shadow-xl w-[360px] overflow-hidden transform scale-95 transition-transform duration-200" id="unsaved-modal-content">
+            <div class="p-6 text-[15px] text-[var(--modal-text)] text-center leading-relaxed font-medium">
+                <span id="modal-filename">Untitled 1*</span> has been modified.<br>
+                Do you want to save it before closing?
+            </div>
+            <div class="flex justify-center gap-3 p-4 pb-6">
+                <button class="px-4 py-[6px] border border-[#dadce0] rounded text-[var(--modal-text)] hover:bg-[#f1f3f4] text-[14px] font-medium" onclick="app.resolveModal('yes')">Yes</button>
+                <button class="px-4 py-[6px] border border-[#dadce0] rounded text-[var(--modal-text)] hover:bg-[#f1f3f4] text-[14px] font-medium" onclick="app.resolveModal('no')">No</button>
+                <button class="px-4 py-[6px] border border-[#dadce0] rounded text-[var(--modal-text)] hover:bg-[#f1f3f4] text-[14px] font-medium" onclick="app.resolveModal('cancel')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = (function() {
+            // State
+            let files = [
+                { id: generateId(), name: 'Untitled 1', content: '', handle: null, isDirty: false }
+            ];
+            let activeFileId = files[0].id;
+            let untitledCount = 1;
+            let codeMirrorInstance = null;
+            
+            let settings = {
+                fontSize: 15,
+                tabsToSpaces: true,
+                tabSize: 4,
+                wrapLines: false,
+                showLineNumbers: true,
+                smartIndent: true,
+                theme: 'dark' // system, light, dark
+            };
+
+            let modalCallback = null;
+            let isSidebarOpen = true;
+
+            // DOM Elements
+            const DOM = {
+                editorContainer: document.getElementById('editor-container'),
+                fileList: document.getElementById('file-list'),
+                mainSidebar: document.getElementById('main-sidebar'),
+                settingsSidebar: document.getElementById('settings-sidebar'),
+                sidebarContainer: document.getElementById('sidebar-container'),
+                unsavedModal: document.getElementById('unsaved-modal'),
+                modalContent: document.getElementById('unsaved-modal-content'),
+                modalFilename: document.getElementById('modal-filename'),
+                topbarTitleDisplay: document.getElementById('topbar-title')
+            };
+
+            function generateId() {
+                return Math.random().toString(36).substr(2, 9);
+            }
+
+            function getActiveFile() {
+                return files.find(f => f.id === activeFileId);
+            }
+
+            function initEditor() {
+                codeMirrorInstance = CodeMirror(DOM.editorContainer, {
+                    mode: "htmlmixed", // Enables comprehensive syntax highlighting including HTML tags
+                    theme: "chrome-text",
+                    lineNumbers: settings.showLineNumbers,
+                    lineWrapping: settings.wrapLines,
+                    indentUnit: settings.tabSize,
+                    indentWithTabs: !settings.tabsToSpaces,
+                    smartIndent: settings.smartIndent,
+                    value: files[0].content,
+                    viewportMargin: Infinity
+                });
+
+                codeMirrorInstance.on('change', (cm, changeObj) => {
+                    if (changeObj.origin === 'setValue') return;
+                    
+                    const file = getActiveFile();
+                    if (file && !file.isDirty) {
+                        file.isDirty = true;
+                        updateTopbarTitle();
+                        renderFileList();
+                    }
+                });
+                
+                document.documentElement.style.setProperty('--editor-font-size', `${settings.fontSize}px`);
+                setTimeout(() => codeMirrorInstance.refresh(), 50);
+            }
+
+            function renderFileList() {
+                DOM.fileList.innerHTML = '';
+                files.forEach(file => {
+                    const isActive = file.id === activeFileId;
+                    const displayName = file.name + (file.isDirty ? ' *' : '');
+                    
+                    const el = document.createElement('div');
+                    el.className = `file-item flex items-center justify-between px-4 py-[6px] mx-2 cursor-pointer group ${isActive ? 'active' : 'hover:bg-[var(--hover-bg)] rounded-full'}`;
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'truncate pointer-events-none select-none flex-1';
+                    nameSpan.textContent = displayName;
+                    
+                    const closeBtn = document.createElement('button');
+                    closeBtn.className = `flex-shrink-0 w-[22px] h-[22px] flex items-center justify-center rounded-full hover:bg-[rgba(128,128,128,0.2)] focus:outline-none ml-2 text-[var(--text-main)] ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`;
+                    closeBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+                    
+                    closeBtn.onclick = (e) => {
+                        e.stopPropagation(); // prevent file switch
+                        requestCloseFile(file.id);
+                    };
+
+                    el.onclick = () => switchFile(file.id);
+                    
+                    // Middle click to close
+                    el.onauxclick = (e) => {
+                        if (e.button === 1) {
+                            e.preventDefault();
+                            requestCloseFile(file.id);
+                        }
+                    };
+                    
+                    el.appendChild(nameSpan);
+                    el.appendChild(closeBtn);
+                    DOM.fileList.appendChild(el);
+                });
+                updateTopbarTitle();
+            }
+
+            function updateTopbarTitle() {
+                const file = getActiveFile();
+                if (file) {
+                    DOM.topbarTitleDisplay.textContent = file.name + (file.isDirty ? '*' : '');
+                } else {
+                    DOM.topbarTitleDisplay.textContent = 'Text';
+                }
+            }
+
+            function switchFile(id) {
+                const currentFile = getActiveFile();
+                if (currentFile && codeMirrorInstance) {
+                    currentFile.content = codeMirrorInstance.getValue();
+                }
+                
+                activeFileId = id;
+                const newFile = getActiveFile();
+                
+                if (newFile && codeMirrorInstance) {
+                    codeMirrorInstance.setValue(newFile.content);
+                    codeMirrorInstance.setOption('readOnly', false);
+                    renderFileList();
+                    setTimeout(() => codeMirrorInstance.focus(), 10);
+                } else if (!newFile && codeMirrorInstance) {
+                    codeMirrorInstance.setValue('');
+                    codeMirrorInstance.setOption('readOnly', 'nocursor');
+                    updateTopbarTitle();
+                }
+            }
+
+            function newFile() {
+                untitledCount++;
+                const newF = { id: generateId(), name: `Untitled ${untitledCount}`, content: '', handle: null, isDirty: false };
+                files.push(newF);
+                switchFile(newF.id);
+            }
+
+            async function openFile() {
+                try {
+                    if ('showOpenFilePicker' in window) {
+                        const [fileHandle] = await window.showOpenFilePicker({
+                            multiple: false
+                        });
+                        const file = await fileHandle.getFile();
+                        const content = await file.text(); // Reads ANY file type as plain text
+                        
+                        const newF = { id: generateId(), name: file.name, content: content, handle: fileHandle, isDirty: false };
+                        files.push(newF);
+                        switchFile(newF.id);
+                    } else {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.onchange = e => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = e => {
+                                const newF = { id: generateId(), name: file.name, content: e.target.result, handle: null, isDirty: false };
+                                files.push(newF);
+                                switchFile(newF.id);
+                            };
+                            reader.readAsText(file); // Reads ANY file type as plain text
+                        };
+                        input.click();
+                    }
+                } catch (err) {
+                    console.log('Open file cancelled or failed', err);
+                }
+            }
+
+            async function saveFile() {
+                const file = getActiveFile();
+                if (!file) return;
+
+                if (codeMirrorInstance) {
+                    file.content = codeMirrorInstance.getValue();
+                }
+
+                if (file.handle) {
+                    try {
+                        const writable = await file.handle.createWritable();
+                        await writable.write(file.content);
+                        await writable.close();
+                        file.isDirty = false;
+                        renderFileList();
+                    } catch (err) {
+                        console.error("Save failed", err);
+                        saveFileAs();
+                    }
+                } else {
+                    saveFileAs();
+                }
+            }
+
+            async function saveFileAs() {
+                const file = getActiveFile();
+                if (!file) return;
+                
+                if (codeMirrorInstance) {
+                    file.content = codeMirrorInstance.getValue();
+                }
+
+                try {
+                    if ('showSaveFilePicker' in window) {
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: file.name,
+                            types: [{ description: 'Text File', accept: {'text/plain': ['.txt', '.html', '.js', '.css', '.json', '.svg', '.xml']} }]
+                        });
+                        const writable = await handle.createWritable();
+                        await writable.write(file.content);
+                        await writable.close();
+                        
+                        file.handle = handle;
+                        file.name = handle.name;
+                        file.isDirty = false;
+                        renderFileList();
+                    } else {
+                        const blob = new Blob([file.content], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = file.name || 'document.txt';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        file.isDirty = false;
+                        renderFileList();
+                    }
+                } catch (err) {
+                    console.log('Save As cancelled or failed', err);
+                }
+            }
+
+            function requestCloseActiveFile() {
+                if (activeFileId) requestCloseFile(activeFileId);
+            }
+
+            function requestCloseFile(id) {
+                const file = files.find(f => f.id === id);
+                if (!file) return;
+
+                if (id === activeFileId && codeMirrorInstance) {
+                    file.content = codeMirrorInstance.getValue();
+                }
+
+                if (file.isDirty) {
+                    showUnsavedModal(file.name, (result) => {
+                        if (result === 'yes') {
+                            switchFile(id);
+                            saveFile().then(() => {
+                                if (!getActiveFile().isDirty) executeClose(id);
+                            });
+                        } else if (result === 'no') {
+                            executeClose(id);
+                        }
+                    });
+                } else {
+                    executeClose(id);
+                }
+            }
+
+            function executeClose(id) {
+                files = files.filter(f => f.id !== id);
+                if (files.length === 0) {
+                    newFile();
+                    if (files[0].name === "Untitled 1") untitledCount = 1;
+                } else if (activeFileId === id) {
+                    switchFile(files[files.length - 1].id);
+                } else {
+                    renderFileList();
+                }
+            }
+
+            function showUnsavedModal(filename, callback) {
+                modalCallback = callback;
+                DOM.modalFilename.textContent = filename + '*';
+                DOM.unsavedModal.classList.remove('hidden');
+                DOM.unsavedModal.classList.add('flex');
+                
+                setTimeout(() => {
+                    DOM.unsavedModal.classList.remove('opacity-0');
+                    DOM.modalContent.classList.remove('scale-95');
+                }, 10);
+            }
+
+            function resolveModal(result) {
+                DOM.unsavedModal.classList.add('opacity-0');
+                DOM.modalContent.classList.add('scale-95');
+                
+                setTimeout(() => {
+                    DOM.unsavedModal.classList.add('hidden');
+                    DOM.unsavedModal.classList.remove('flex');
+                    if (modalCallback) {
+                        modalCallback(result);
+                        modalCallback = null;
+                    }
+                }, 200);
+            }
+
+            function toggleSidebar() {
+                isSidebarOpen = !isSidebarOpen;
+                if (isSidebarOpen) {
+                    DOM.sidebarContainer.classList.remove('collapsed');
+                } else {
+                    DOM.sidebarContainer.classList.add('collapsed');
+                }
+                setTimeout(() => {
+                    if (codeMirrorInstance) codeMirrorInstance.refresh();
+                }, 200);
+            }
+
+            function toggleSettingsView(showSettings) {
+                if (showSettings) {
+                    DOM.mainSidebar.classList.add('opacity-0', 'pointer-events-none');
+                    DOM.settingsSidebar.classList.remove('opacity-0', 'pointer-events-none');
+                    syncSettingsUI();
+                } else {
+                    DOM.settingsSidebar.classList.add('opacity-0', 'pointer-events-none');
+                    DOM.mainSidebar.classList.remove('opacity-0', 'pointer-events-none');
+                }
+            }
+
+            function updateSettings(key, value) {
+                if (key === 'fontSize' || key === 'tabSize') {
+                    value = parseInt(value) || settings[key];
+                }
+                settings[key] = value;
+                applySettings();
+            }
+
+            function applySettings() {
+                document.documentElement.style.setProperty('--editor-font-size', `${settings.fontSize}px`);
+                
+                if (codeMirrorInstance) {
+                    codeMirrorInstance.setOption('indentUnit', settings.tabSize);
+                    codeMirrorInstance.setOption('indentWithTabs', !settings.tabsToSpaces);
+                    codeMirrorInstance.setOption('lineWrapping', settings.wrapLines);
+                    codeMirrorInstance.setOption('lineNumbers', settings.showLineNumbers);
+                    codeMirrorInstance.setOption('smartIndent', settings.smartIndent);
+                    codeMirrorInstance.refresh();
+                }
+            }
+
+            function syncSettingsUI() {
+                document.getElementById('setting-fontsize').value = settings.fontSize;
+                document.getElementById('setting-tabs').checked = settings.tabsToSpaces;
+                document.getElementById('setting-tabsize').value = settings.tabSize;
+                document.getElementById('setting-wrap').checked = settings.wrapLines;
+                document.getElementById('setting-linenumbers').checked = settings.showLineNumbers;
+                document.getElementById('setting-smartindent').checked = settings.smartIndent;
+                
+                const themeRadios = document.getElementsByName('theme');
+                for (let r of themeRadios) {
+                    r.checked = (r.value === settings.theme);
+                }
+            }
+
+            function setTheme(themeName) {
+                settings.theme = themeName;
+                const body = document.body;
+                body.classList.remove('dark', 'light');
+                
+                if (themeName === 'dark') {
+                    body.classList.add('dark');
+                } else if (themeName === 'light') {
+                } else if (themeName === 'system') {
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        body.classList.add('dark');
+                    } else {
+                        body.classList.add('light');
+                    }
+                }
+            }
+
+            function toggleFullScreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.log(`Error attempting to enable full-screen mode: ${err.message}`);
+                    });
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            }
+
+            function init() {
+                initEditor();
+                renderFileList();
+                applySettings();
+                setTheme(settings.theme);
+                
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                    if (settings.theme === 'system') {
+                        setTheme('system');
+                    }
+                });
+
+                window.addEventListener('dragover', e => e.preventDefault());
+                window.addEventListener('drop', e => {
+                    e.preventDefault();
+                    if (e.dataTransfer.items) {
+                        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+                            if (e.dataTransfer.items[i].kind === 'file') {
+                                const file = e.dataTransfer.items[i].getAsFile();
+                                const reader = new FileReader();
+                                reader.onload = ev => {
+                                    const newF = { id: generateId(), name: file.name, content: ev.target.result, handle: null, isDirty: false };
+                                    files.push(newF);
+                                    switchFile(newF.id);
+                                };
+                                reader.readAsText(file); // This guarantees that ANYTHING dropped gets read as plain text
+                                break;
+                            }
+                        }
+                    }
+                });
+
+                // Global keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        if (e.key === 's') {
+                            e.preventDefault();
+                            saveFile();
+                        } else if (e.key === 'o') {
+                            e.preventDefault();
+                            openFile();
+                        } else if (e.key === 'n') {
+                            e.preventDefault();
+                            newFile();
+                        }
+                    }
+                });
+            }
+
+            init();
+
+            // Expose public API
+            return {
+                newFile, openFile, saveFile, saveFileAs, requestCloseActiveFile,
+                toggleSidebar, toggleSettingsView, updateSettings, setTheme,
+                resolveModal, toggleFullScreen
+            };
+        })();
+    </script>
+</body>
+</html>

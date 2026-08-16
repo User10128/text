@@ -1,0 +1,24 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Chrome Text",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Text",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "description": "A useable copy of the original legacy Google Chrome Text App.",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "favicon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

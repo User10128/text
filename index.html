@@ -14,6 +14,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/search/searchcursor.min.js"></script>
     <style>
         :root {
             /* Light Theme Variables */
@@ -126,6 +127,13 @@
         body.light .cm-s-chrome-text span.cm-string { color: #1e8e3e; }
         body.light .cm-s-chrome-text span.cm-comment { color: #5f6368; }
         body.light .cm-s-chrome-text span.cm-keyword { color: #9334e6; }
+
+        .cm-searching {
+            background-color: rgba(255, 255, 0, 0.4);
+        }
+        body.dark .cm-searching {
+            background-color: rgba(255, 255, 0, 0.3);
+        }
 
         .toggle-checkbox:checked {
             right: 0;
@@ -397,8 +405,55 @@
                 unsavedModal: document.getElementById('unsaved-modal'),
                 modalContent: document.getElementById('unsaved-modal-content'),
                 modalFilename: document.getElementById('modal-filename'),
-                topbarTitleDisplay: document.getElementById('topbar-title')
+                topbarTitleDisplay: document.getElementById('topbar-title'),
+                findInput: document.getElementById('find-input')
             };
+
+            let searchMarkers = [];
+            let lastSearchQuery = '';
+            let currentSearchCursor = null;
+
+            function clearSearch() {
+                searchMarkers.forEach(marker => marker.clear());
+                searchMarkers = [];
+                lastSearchQuery = '';
+                currentSearchCursor = null;
+            }
+
+            function performSearch(advance = false) {
+                if (!codeMirrorInstance) return;
+                const query = DOM.findInput.value;
+
+                if (query !== lastSearchQuery) {
+                    searchMarkers.forEach(marker => marker.clear());
+                    searchMarkers = [];
+                    lastSearchQuery = query;
+                }
+
+                if (!query) {
+                    currentSearchCursor = null;
+                    return;
+                }
+
+                if (!advance || !currentSearchCursor) {
+                    if (searchMarkers.length === 0) {
+                        const cursor = codeMirrorInstance.getSearchCursor(query, null, {caseFold: true});
+                        while (cursor.findNext()) {
+                            const marker = codeMirrorInstance.markText(cursor.from(), cursor.to(), {className: "cm-searching"});
+                            searchMarkers.push(marker);
+                        }
+                    }
+                    currentSearchCursor = codeMirrorInstance.getSearchCursor(query, null, {caseFold: true});
+                }
+
+                if (!currentSearchCursor.findNext()) {
+                    currentSearchCursor = codeMirrorInstance.getSearchCursor(query, null, {caseFold: true});
+                    if (!currentSearchCursor.findNext()) return; 
+                }
+
+                codeMirrorInstance.setSelection(currentSearchCursor.from(), currentSearchCursor.to());
+                codeMirrorInstance.scrollIntoView({from: currentSearchCursor.from(), to: currentSearchCursor.to()}, 50);
+            }
 
             function generateId() {
                 return Math.random().toString(36).substr(2, 9);
@@ -497,6 +552,11 @@
                     codeMirrorInstance.setValue(newFile.content);
                     codeMirrorInstance.setOption('readOnly', false);
                     renderFileList();
+                    
+                    // Reset search when switching files
+                    DOM.findInput.value = '';
+                    clearSearch();
+                    
                     setTimeout(() => codeMirrorInstance.focus(), 10);
                 } else if (!newFile && codeMirrorInstance) {
                     codeMirrorInstance.setValue('');
@@ -766,6 +826,14 @@
                 applySettings();
                 setTheme(settings.theme);
                 
+                DOM.findInput.addEventListener('input', () => performSearch(false));
+                DOM.findInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        performSearch(true);
+                    }
+                });
+
                 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
                     if (settings.theme === 'system') {
                         setTheme('system');
@@ -804,6 +872,10 @@
                         } else if (e.key === 'n') {
                             e.preventDefault();
                             newFile();
+                        } else if (e.key === 'f') {
+                            e.preventDefault();
+                            DOM.findInput.focus();
+                            DOM.findInput.select();
                         }
                     }
                 });
